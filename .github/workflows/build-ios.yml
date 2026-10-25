@@ -8,6 +8,8 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+    permissions:
+      contents: write # 必须赋予写入权限，以便 Actions 能够自动创建 Release 并上传文件
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,10 +40,14 @@ jobs:
           cd simple_live_app
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -r simple_live.ipa Payload
+          zip -r dart_simple_live.ipa Payload
 
-      - name: Upload iOS IPA to Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create Release and Upload IPA
+        uses: softprops/action-gh-release@v1
         with:
-          name: ios-ipa
-          path: simple_live_app/simple_live.ipa
+          files: simple_live_app/dart_simple_live.ipa
+          tag_name: v1.0.${{ github.run_number }} # 自动生成唯一的版本号标签 (例如 v1.0.5)
+          name: "Dart Simple Live - v1.0.${{ github.run_number }}"
+          body: "Automated build for LiveContainer (No codesign required)."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
