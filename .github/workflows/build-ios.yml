@@ -28,20 +28,20 @@ jobs:
           cd simple_live_app
           flutter pub get
 
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
-
-      - name: Build iOS IPA
+      - name: Build iOS App (No Codesign)
         run: |
           cd simple_live_app
-          flutter_distributor package --platform ios --targets ipa --skip-clean
+          flutter build ios --release --no-codesign
+
+      - name: Package into IPA for LiveContainer
+        run: |
+          cd simple_live_app
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r simple_live.ipa Payload
 
       - name: Upload iOS IPA to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: |
-            simple_live_app/build/dist/*/*.ipa
-
-      - name: Echo Status
-        run: echo "🍏 iOS build job completed successfully with status ${{ job.status }}."
+          path: simple_live_app/simple_live.ipa
