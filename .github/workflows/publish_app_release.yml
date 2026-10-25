@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 jobs:
   build-mac-ios-android:
     runs-on: macos-latest
