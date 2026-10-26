@@ -1,7 +1,6 @@
 name: Build iOS and Android TV
 
 on:
-  # 关键：彻底移除了 push 触发，只有手动点击 Run workflow 才会运行，不会自动计费
   workflow_dispatch:
 
 jobs:
@@ -21,9 +20,6 @@ jobs:
           flutter-version: "3.38.x"
           cache: true
 
-      # -----------------------------------------------------------------
-      # 1. 编译 iOS (免签名，供 LiveContainer 使用)
-      # -----------------------------------------------------------------
       - name: Enable Flutter iOS
         run: flutter config --enable-ios
 
@@ -44,9 +40,6 @@ jobs:
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r dart_simple_live_ios.ipa Payload
 
-      # -----------------------------------------------------------------
-      # 2. 编译 Android TV 版本
-      # -----------------------------------------------------------------
       - name: Restore Packages for TV
         run: |
           cd simple_live_tv_app
@@ -57,9 +50,6 @@ jobs:
           cd simple_live_tv_app
           flutter build apk --release
 
-      # -----------------------------------------------------------------
-      # 3. 统一打包并发布到 Release
-      # -----------------------------------------------------------------
       - name: Create Release and Upload Both Binaries
         uses: softprops/action-gh-release@v1
         with:
@@ -75,6 +65,5 @@ jobs:
             | :--- | :--- | :--- |
             | **`dart_simple_live_ios.ipa`** | iOS / iPadOS | **免签名版**，专为 **LiveContainer** 等签名工具设计，无需苹果开发者证书即可直接导入运行。 |
             | **`app-release.apk`** | Android TV / 电视端 | **安卓电视版安装包**，适用于 Android TV 或智能电视盒子。 |
-        env:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
