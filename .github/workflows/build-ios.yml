@@ -1,15 +1,14 @@
-name: Build iOS IPA
+name: Build iOS and Android TV
 
 on:
-  push:
-    branches: [ main, master ]
+  # 关键：彻底移除了 push 触发，只有手动点击 Run workflow 才会运行，不会自动计费
   workflow_dispatch:
 
 jobs:
-  build-ios:
+  build-all:
     runs-on: macos-latest
     permissions:
-      contents: write # 必须赋予写入权限，以便 Actions 能够自动创建 Release 并上传文件
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,10 +21,13 @@ jobs:
           flutter-version: "3.38.x"
           cache: true
 
+      # -----------------------------------------------------------------
+      # 1. 编译 iOS (免签名，供 LiveContainer 使用)
+      # -----------------------------------------------------------------
       - name: Enable Flutter iOS
         run: flutter config --enable-ios
 
-      - name: Restore Packages
+      - name: Restore Packages for iOS
         run: |
           cd simple_live_app
           flutter pub get
@@ -35,19 +37,44 @@ jobs:
           cd simple_live_app
           flutter build ios --release --no-codesign
 
-      - name: Package into IPA for LiveContainer
+      - name: Package into iOS IPA
         run: |
           cd simple_live_app
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -r dart_simple_live.ipa Payload
+          zip -r dart_simple_live_ios.ipa Payload
 
-      - name: Create Release and Upload IPA
+      # -----------------------------------------------------------------
+      # 2. 编译 Android TV 版本
+      # -----------------------------------------------------------------
+      - name: Restore Packages for TV
+        run: |
+          cd simple_live_tv_app
+          flutter pub get
+
+      - name: Build Android TV APK
+        run: |
+          cd simple_live_tv_app
+          flutter build apk --release
+
+      # -----------------------------------------------------------------
+      # 3. 统一打包并发布到 Release
+      # -----------------------------------------------------------------
+      - name: Create Release and Upload Both Binaries
         uses: softprops/action-gh-release@v1
         with:
-          files: simple_live_app/dart_simple_live.ipa
-          tag_name: v1.0.${{ github.run_number }} # 自动生成唯一的版本号标签 (例如 v1.0.5)
-          name: "Dart Simple Live - v1.0.${{ github.run_number }}"
-          body: "Automated build for LiveContainer (No codesign required)."
+          files: |
+            simple_live_app/dart_simple_live_ios.ipa
+            simple_live_tv_app/build/app/outputs/flutter-apk/app-release.apk
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Dart Simple Live & TV - v1.0.${{ github.run_number }}"
+          body: |
+            ## 📥 Download / 下载说明
+            
+            | Asset / 文件 | Platform / 平台 | Description / 用途说明 |
+            | :--- | :--- | :--- |
+            | **`dart_simple_live_ios.ipa`** | iOS / iPadOS | **免签名版**，专为 **LiveContainer** 等签名工具设计，无需苹果开发者证书即可直接导入运行。 |
+            | **`app-release.apk`** | Android TV / 电视端 | **安卓电视版安装包**，适用于 Android TV 或智能电视盒子。 |
+        env:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
